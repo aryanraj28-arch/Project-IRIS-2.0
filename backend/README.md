@@ -34,15 +34,29 @@ npm install
 Create `.env` file with:
 
 ```env
+# Server Configuration
+PORT=5000
+BACKEND_URL=http://localhost:5000
+FRONTEND_URL=http://localhost:5173
+
+# Database
 MONGO_URI=your_mongodb_connection_string
+
+# Authentication
 JWT_SECRET=your_jwt_secret_key
+
+# Cloudinary Configuration
 CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
 CLOUDINARY_API_KEY=your_cloudinary_api_key
 CLOUDINARY_API_SECRET=your_cloudinary_api_secret
+CLOUDINARY_URL=cloudinary://api_key:api_secret@cloud_name
+
+# Razorpay Configuration
 RAZORPAY_KEY_ID=your_razorpay_key_id
 RAZORPAY_KEY_SECRET=your_razorpay_key_secret
-PORT=5000
 ```
+
+**Note**: Copy `.env.example` and rename it to `.env`, then fill in your credentials.
 
 ### 3. Run Development Server
 
