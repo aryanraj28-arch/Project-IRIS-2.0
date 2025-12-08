@@ -28,15 +28,17 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'IRIS Backend is running' });
 });
 
-const PORT = process.env.PORT || 5000;
+const PORT = parseInt(process.env.PORT || '5000', 10);
+const HOST = '0.0.0.0'; // Listen on all network interfaces (required for Render/cloud deployments)
 
 // Connect to MongoDB and start server
 mongoose.connect(process.env.MONGO_URI!)
   .then(() => {
     console.log('✅ MongoDB connected successfully');
-    app.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
+    app.listen(PORT, HOST, () => {
+      console.log(`🚀 Server running on ${HOST}:${PORT}`);
       console.log(`📡 Health check: http://localhost:${PORT}/health`);
+      console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
     });
   })
   .catch(err => {

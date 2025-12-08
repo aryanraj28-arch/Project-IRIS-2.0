@@ -4,9 +4,10 @@
   "description": "Backend for IRIS 2.0 Vision Assistant PWA",
   "main": "dist/index.js",
   "scripts": {
-    "start": "ts-node-dev src/index.ts",
+    "start": "node dist/index.js",
     "build": "tsc",
-    "dev": "ts-node-dev --respawn src/index.ts"
+    "dev": "ts-node-dev --respawn src/index.ts",
+    "start:dev": "ts-node src/index.ts"
   },
   "keywords": ["iris", "vision-assistant", "accessibility"],
   "author": "",
