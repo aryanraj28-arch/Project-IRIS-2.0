@@ -41,7 +41,7 @@ const App: React.FC = () => {
   const { speak, cancel, isSpeaking } = useTextToSpeech(language);
   const { isListening: isListeningForInput, listen: listenForInput } = useSpeechToText();
   const { volume, start: startVisualizer, stop: stopVisualizer } = useAudioVisualizer(stream);
-  const { isListening, error: voiceError, startListening, stopListening, pauseListening, resumeListening, resetError } = useVoiceCommands({ onTranscript: (t, isFinal) => handleVoiceCommand(t, isFinal), language });
+  const { isListening, error: voiceError, startListening, stopListening, pauseListening, resumeListening, resetError, resumeAfterProcessing } = useVoiceCommands({ onTranscript: (t, isFinal) => handleVoiceCommand(t, isFinal), language });
   
   // Keep screen awake when voice commands are active (important for mobile PWA)
   useWakeLock(isVoiceCommandActive);
@@ -244,9 +244,12 @@ const App: React.FC = () => {
   };
 
   const handleVoiceCommand = async (transcript: string, isFinal: boolean) => {
+    console.log(`[Voice Command] Received: "${transcript}", isFinal: ${isFinal}, isBusy: ${isBusy}`);
+    
     // Universal stop check should ALWAYS be first, ignoring busy state.
     const stopWords = ['stop', 'cancel', 'be quiet', 'enough', "that's enough"];
     if (stopWords.some(word => transcript.toLowerCase().includes(word))) {
+        console.log('[Voice Command] Stop command detected');
         cancel();
         stopLiveCommentary();
         stopObjectFinder();
@@ -254,11 +257,16 @@ const App: React.FC = () => {
         const stopMessage = "Okay, stopped.";
         setLastResponse(stopMessage);
         speak(stopMessage);
+        resumeAfterProcessing(); // Resume for next command
         return;
     }
 
-    if (isBusy || !isFinal) return;
+    if (isBusy || !isFinal) {
+      console.log('[Voice Command] Skipping - busy or not final');
+      return;
+    }
 
+    console.log('[Voice Command] Processing command:', transcript);
     const preCommandState = appState;
     setAppState(AppState.INTERPRETING_COMMAND);
     setLastResponse(`Interpreting: "${transcript}"...`);
@@ -293,6 +301,10 @@ const App: React.FC = () => {
             }
             return currentState;
         });
+        
+        // Resume voice recognition after command processing (important for mobile)
+        console.log('[Voice Command] Command processing complete, resuming recognition');
+        resumeAfterProcessing();
     }
   };
   

@@ -170,7 +170,7 @@ export const useVoiceCommands = ({ onTranscript, language }: UseVoiceCommandsPro
       if (lastResult.isFinal && transcript && onTranscriptRef.current) {
         console.log('Final transcript received:', transcript);
         
-        // On mobile, set processing flag and stop recognition to prevent immediate restart
+        // On mobile, set processing flag and stop recognition
         if (isMobileRef.current) {
           isProcessingTranscript.current = true;
           try {
@@ -183,25 +183,8 @@ export const useVoiceCommands = ({ onTranscript, language }: UseVoiceCommandsPro
         // Process the transcript
         onTranscriptRef.current(transcript, true, confidence);
         
-        // On mobile, clear processing flag after a delay and restart
-        if (isMobileRef.current) {
-          setTimeout(() => {
-            isProcessingTranscript.current = false;
-            // Restart recognition if still active
-            if (!isStoppedManually.current && !isPaused.current) {
-              try {
-                console.log('Restarting recognition after processing transcript');
-                recognitionRef.current?.start();
-              } catch (e) {
-                if (e instanceof DOMException && e.name === 'InvalidStateError') {
-                  console.log('Recognition already starting, ignoring error');
-                } else {
-                  console.warn('Error restarting recognition:', e);
-                }
-              }
-            }
-          }, 800); // Give time for command processing
-        }
+        // On mobile, DO NOT auto-restart - wait for explicit resumeAfterProcessing call
+        // This prevents restart before command processing completes
       } else if (!lastResult.isFinal && transcript && onTranscriptRef.current) {
         onTranscriptRef.current(transcript, false, confidence); // Pass interim transcript
       }
@@ -358,6 +341,27 @@ export const useVoiceCommands = ({ onTranscript, language }: UseVoiceCommandsPro
     isStoppedManually.current = false;
   }, []);
 
+  // Resume after processing transcript (mobile specific)
+  const resumeAfterProcessing = useCallback(() => {
+    console.log('Resuming recognition after command processing complete');
+    isProcessingTranscript.current = false;
+    
+    // Only restart if still active and on mobile
+    if (isMobileRef.current && !isStoppedManually.current && !isPaused.current) {
+      setTimeout(() => {
+        try {
+          recognitionRef.current?.start();
+        } catch (e) {
+          if (e instanceof DOMException && e.name === 'InvalidStateError') {
+            console.log('Recognition already starting, ignoring error');
+          } else {
+            console.warn('Error resuming recognition:', e);
+          }
+        }
+      }, 300); // Small delay before restart
+    }
+  }, []);
+
   return { 
     isListening, 
     error, 
@@ -366,6 +370,7 @@ export const useVoiceCommands = ({ onTranscript, language }: UseVoiceCommandsPro
     pauseListening, 
     resumeListening, 
     restartListening,
-    resetError 
+    resetError,
+    resumeAfterProcessing
   };
 };
