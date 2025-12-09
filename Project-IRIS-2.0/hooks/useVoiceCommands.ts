@@ -52,6 +52,7 @@ export const useVoiceCommands = ({ onTranscript, language }: UseVoiceCommandsPro
   const restartTimerRef = useRef<number | null>(null);
   const isPaused = useRef(false);
   const isMobileRef = useRef(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent));
+  const isProcessingTranscript = useRef(false); // Prevent restart during transcript processing
 
   useEffect(() => {
     if (!SpeechRecognition) {
@@ -62,10 +63,21 @@ export const useVoiceCommands = ({ onTranscript, language }: UseVoiceCommandsPro
     // Request microphone permission explicitly for PWA
     const requestMicrophonePermission = async () => {
       try {
-        await navigator.mediaDevices.getUserMedia({ audio: true });
-      } catch (err) {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        // Stop the stream immediately after permission is granted
+        stream.getTracks().forEach(track => track.stop());
+        console.log('Microphone permission granted');
+      } catch (err: any) {
         console.error("Microphone permission denied:", err);
-        setError("Microphone access is required for voice commands. Please grant permission.");
+        isStoppedManually.current = true; // Prevent starting recognition
+        
+        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+          setError("⚠️ Microphone access denied. Please enable microphone permission in your device settings:\n\n📱 Android: Settings → Apps → IRIS → Permissions → Microphone\n📱 iOS: Settings → Safari → Microphone → Allow\n\nThen refresh the app.");
+        } else if (err.name === 'NotFoundError') {
+          setError("No microphone found on your device.");
+        } else {
+          setError(`Microphone error: ${err.message || 'Unknown error'}`);
+        }
       }
     };
 
@@ -89,7 +101,7 @@ export const useVoiceCommands = ({ onTranscript, language }: UseVoiceCommandsPro
     };
 
     recognition.onend = () => {
-      console.log('Speech recognition ended, paused:', isPaused.current, 'stopped:', isStoppedManually.current);
+      console.log('Speech recognition ended, paused:', isPaused.current, 'stopped:', isStoppedManually.current, 'processing:', isProcessingTranscript.current);
       setIsListening(false);
       
       // Clear any existing restart timer
@@ -97,14 +109,17 @@ export const useVoiceCommands = ({ onTranscript, language }: UseVoiceCommandsPro
         clearTimeout(restartTimerRef.current);
       }
       
-      // Only restart if not manually stopped and not paused
-      if (!isStoppedManually.current && !isPaused.current) {
+      // Don't restart if:
+      // 1. Manually stopped
+      // 2. Paused (in background)
+      // 3. Currently processing transcript (mobile only - will restart after processing)
+      if (!isStoppedManually.current && !isPaused.current && !isProcessingTranscript.current) {
         // Mobile needs more aggressive restart with longer delay
         const restartDelay = isMobileRef.current ? 500 : 250;
         
         restartTimerRef.current = window.setTimeout(() => {
           // Double check state before restarting
-          if (!isStoppedManually.current && !isPaused.current) {
+          if (!isStoppedManually.current && !isPaused.current && !isProcessingTranscript.current) {
             try { 
               console.log('Auto-restarting speech recognition');
               recognitionRef.current?.start(); 
@@ -121,10 +136,30 @@ export const useVoiceCommands = ({ onTranscript, language }: UseVoiceCommandsPro
     };
 
     recognition.onerror = (event) => {
-      if (event.error !== 'no-speech' && event.error !== 'audio-capture' && event.error !== 'aborted') {
-        setError(`Speech Error: ${event.error}`);
-        console.error('Speech recognition error:', event.error);
+      console.error('Speech recognition error:', event.error);
+      
+      // Handle permission denied - stop trying to restart
+      if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+        isStoppedManually.current = true; // Prevent auto-restart
+        setError('Microphone permission denied. Please enable microphone access in your browser/phone settings and try again.');
+        setIsListening(false);
+        return;
       }
+      
+      // Handle network errors
+      if (event.error === 'network') {
+        setError('Network error. Please check your internet connection.');
+        return;
+      }
+      
+      // Ignore common non-critical errors
+      if (event.error === 'no-speech' || event.error === 'audio-capture' || event.error === 'aborted') {
+        console.log('Non-critical error, continuing:', event.error);
+        return;
+      }
+      
+      // Other errors
+      setError(`Speech Error: ${event.error}`);
     };
 
     recognition.onresult = (event) => {
@@ -133,7 +168,40 @@ export const useVoiceCommands = ({ onTranscript, language }: UseVoiceCommandsPro
       const confidence = lastResult[0].confidence || 0;
       
       if (lastResult.isFinal && transcript && onTranscriptRef.current) {
-        onTranscriptRef.current(transcript, true, confidence); // Pass final transcript
+        console.log('Final transcript received:', transcript);
+        
+        // On mobile, set processing flag and stop recognition to prevent immediate restart
+        if (isMobileRef.current) {
+          isProcessingTranscript.current = true;
+          try {
+            recognitionRef.current?.stop();
+          } catch (e) {
+            console.warn('Error stopping recognition after final result:', e);
+          }
+        }
+        
+        // Process the transcript
+        onTranscriptRef.current(transcript, true, confidence);
+        
+        // On mobile, clear processing flag after a delay and restart
+        if (isMobileRef.current) {
+          setTimeout(() => {
+            isProcessingTranscript.current = false;
+            // Restart recognition if still active
+            if (!isStoppedManually.current && !isPaused.current) {
+              try {
+                console.log('Restarting recognition after processing transcript');
+                recognitionRef.current?.start();
+              } catch (e) {
+                if (e instanceof DOMException && e.name === 'InvalidStateError') {
+                  console.log('Recognition already starting, ignoring error');
+                } else {
+                  console.warn('Error restarting recognition:', e);
+                }
+              }
+            }
+          }, 800); // Give time for command processing
+        }
       } else if (!lastResult.isFinal && transcript && onTranscriptRef.current) {
         onTranscriptRef.current(transcript, false, confidence); // Pass interim transcript
       }
@@ -191,18 +259,38 @@ export const useVoiceCommands = ({ onTranscript, language }: UseVoiceCommandsPro
     };
   }, [language]);
 
-  const startListening = useCallback(() => {
+  const startListening = useCallback(async () => {
     if (restartTimerRef.current) {
       clearTimeout(restartTimerRef.current);
     }
+    
+    // Check microphone permission before starting
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach(track => track.stop());
+      setError(null); // Clear any previous errors
+    } catch (err: any) {
+      console.error("Microphone not available:", err);
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        setError("⚠️ Please enable microphone permission in your device settings and try again.");
+      }
+      return; // Don't start recognition if permission denied
+    }
+    
     if (recognitionRef.current && !isListening) {
       isStoppedManually.current = false;
       isPaused.current = false;
       try {
+        console.log('Starting voice recognition...');
         recognitionRef.current.start();
-      } catch (e) {
+      } catch (e: any) {
         // This can happen if start is called while it's already starting
-        console.warn("Could not start voice commands listener:", e);
+        if (e.name === 'InvalidStateError') {
+          console.log('Recognition already starting, ignoring...');
+        } else {
+          console.error("Could not start voice commands listener:", e);
+          setError(`Failed to start: ${e.message || 'Unknown error'}`);
+        }
       }
     }
   }, [isListening]);
@@ -264,5 +352,20 @@ export const useVoiceCommands = ({ onTranscript, language }: UseVoiceCommandsPro
     }
   }, [isListening]);
 
-  return { isListening, error, startListening, stopListening, pauseListening, resumeListening, restartListening };
+  // Reset error and allow retry
+  const resetError = useCallback(() => {
+    setError(null);
+    isStoppedManually.current = false;
+  }, []);
+
+  return { 
+    isListening, 
+    error, 
+    startListening, 
+    stopListening, 
+    pauseListening, 
+    resumeListening, 
+    restartListening,
+    resetError 
+  };
 };
