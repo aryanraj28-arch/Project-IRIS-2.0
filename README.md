@@ -125,12 +125,12 @@ Meet the amazing team behind Project IRIS 2.0:
 
 | Name | Role | GitHub |
 |------|------|--------|
-| **ANIKET KUMAR SINGH** | [TEAM LEAD,APP/WEB DEVLOPER] | [![GitHub](https://img.shields.io/badge/GitHub-Profile-blue?style=flat&logo=github)](https://github.com/username1) |
-| **DEVANSH AGARWAL** | [APP/WEB DEVLOPER] | [![GitHub](https://img.shields.io/badge/GitHub-Profile-blue?style=flat&logo=github)](https://github.com/username2) |
+| **ANIKET KUMAR SINGH** | [TEAM LEAD,APP/WEB DEVLOPER] | [![GitHub](https://img.shields.io/badge/GitHub-Profile-blue?style=flat&logo=github)](https://github.com/Aniket-1149) |
+| **DEVANSH AGARWAL** | [APP/WEB DEVLOPER] | [![GitHub](https://img.shields.io/badge/GitHub-Profile-blue?style=flat&logo=github)](https://github.com/Devansh7887) |
 | **AASTHA SANODIYA** | [UI/UX DESIGNER] | [![GitHub](https://img.shields.io/badge/GitHub-Profile-blue?style=flat&logo=github)](https://github.com/username3) |
-| **KAUSHAL KUMAR** | [RIOT SPECIALIST] | [![GitHub](https://img.shields.io/badge/GitHub-Profile-blue?style=flat&logo=github)](https://github.com/username4) |
+| **KAUSHAL KUMAR** | [IoT/ML ENGINEER] | [![GitHub](https://img.shields.io/badge/GitHub-Profile-blue?style=flat&logo=github)](https://github.com/thekaushal01) |
 | **ARYAN RAJ** | [ML ENGINEER] | [![GitHub](https://img.shields.io/badge/GitHub-Profile-blue?style=flat&logo=github)](https://github.com/username5) |
-| **ARYAN RAJPUT** | [ML ENGINEER] | [![GitHub](https://img.shields.io/badge/GitHub-Profile-blue?style=flat&logo=github)](https://github.com/username6) |
+| **ARYAN RAJPUT** | [ML ENGINEER & PRESENTATION DESIGNER] | [![GitHub](https://img.shields.io/badge/GitHub-Profile-blue?style=flat&logo=github)](https://github.com/username6) |
 
 ---
 
@@ -139,10 +139,12 @@ Meet the amazing team behind Project IRIS 2.0:
 Project IRIS 2.0 was developed as part of our commitment to creating inclusive technology that makes a real difference in people's lives. We believe that everyone deserves equal access to information and independence, regardless of their visual abilities.
 
 ### Awards & Recognition
-- 🏅 [Add any awards or recognition here]
+- **🏆 Winner – Smart India Hackathon (SIH) 2025 Grand Finale**
+- Awarded ₹1.5 Lakh for developing an innovative problem-solving solution at the national level.
 
 ### Presented At
-- 📍 [Add presentation venues here]
+- **📍Smart India Hackathon (SIH) 2025 Grand Finale**
+- **Nodal Centre:** QISCET, Ongole, Andhra Pradesh, India
 
 ---
 
